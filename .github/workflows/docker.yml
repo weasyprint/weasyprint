@@ -1,0 +1,80 @@
+name: "Docker"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # every day at midnight
+    
+permissions:
+  contents: "write"
+  packages: "write"
+  
+env:
+  CONTAINER_REGISTRY: ghcr.io
+  CONTAINER_NAME: weasyprint/weasyprint
+  
+jobs:
+  release:
+    runs-on: "ubuntu-latest"
+    
+    steps:
+      - name: "Checkout Repository"
+        uses: "actions/checkout@v3"
+        
+      - name: "Reactivate Repository"
+        uses: "custom-workflows/reactivate@latest"
+        with: 
+          commit_message: "github-actions: Reactivate repository"
+          committer_username: "GitHub Actions [Bot]"
+          committer_email: "github-actions[bot]@users.noreply.github.com"
+          days_elapsed: 50
+          
+      - name: "Generate Metadata"
+        id: "metadata"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: "bash"
+        run: |
+          set -e
+          
+          version=$(gh release view --repo kozea/weasyprint --json tagName --template '{{.tagName}}')
+          isPreRelease=$(gh release view --repo kozea/weasyprint --json isPrerelease --template '{{.isPrerelease}}')
+                    
+          if [[ $isPreRelease == "true" ]]; then
+            release="nop"
+          else
+            release="create"
+          fi
+          
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+            
+      - name: "Login [ghcr.io]"
+        if: ${{ steps.metadata.outputs.release == 'create' }}
+        uses: "docker/login-action@v2.1.0"
+        with:
+          registry: ${{ env.CONTAINER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: "Extract MetaData (Tags, Labels)"
+        if: ${{ steps.metadata.outputs.release == 'create' }}
+        id: "docker-metadata"
+        uses: "docker/metadata-action@v4.3.0"
+        with:
+          images: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_NAME }}
+          tags: |
+            ${{ steps.metadata.outputs.version }}
+            latest
+          labels: |
+            org.opencontainers.image.title=WeasyPrint
+            org.opencontainers.image.version=${{ steps.metadata.outputs.version }}
+          
+      - name: "Build & Push"
+        if: ${{ steps.metadata.outputs.release == 'create' }}
+        uses: "docker/build-push-action@v4.0.0"
+        with:
+          context: "."
+          push: "true"
+          tags: ${{ steps.docker-metadata.outputs.tags }}
+          labels: ${{ steps.docker-metadata.outputs.labels }}
