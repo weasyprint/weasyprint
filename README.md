@@ -15,7 +15,7 @@ You'll need [Docker](https://docker.com) installed.
 Run the following command in Windows PowerShell.
 
 ```powershell
-$ docker run --volume ${PWD}:/mnt/local ghcr.io/weasyprint/weasyprint index.html out.pdf
+$ docker run --rm --volume ${PWD}:/mnt/local ghcr.io/weasyprint/weasyprint index.html out.pdf
 ```
 
 #### CMD
@@ -23,7 +23,7 @@ $ docker run --volume ${PWD}:/mnt/local ghcr.io/weasyprint/weasyprint index.html
 Run the following command in Windows Command Prompt.
 
 ```sh
-$ docker run --volume %cd%:/mnt/local ghcr.io/weasyprint/weasyprint index.html out.pdf
+$ docker run --rm --volume %cd%:/mnt/local ghcr.io/weasyprint/weasyprint index.html out.pdf
 ```
 
 ## 👷‍ Error Found?
