@@ -1,9 +1,7 @@
-FROM alpine
+FROM python
 
 WORKDIR /mnt/local
 
-RUN apk update && apk upgrade
-
-RUN apk add weasyprint
+RUN pip install weasyprint
 
 ENTRYPOINT [ "weasyprint" ]

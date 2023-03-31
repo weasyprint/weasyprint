@@ -29,28 +29,15 @@ jobs:
           committer_email: "github-actions[bot]@users.noreply.github.com"
           days_elapsed: 50
           
-      - name: "Generate Metadata"
-        id: "metadata"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Fetch Latest Version from PyPI.org"
+        id: "pypi"
         shell: "bash"
         run: |
-          set -e
-          
-          version=$(gh release view --repo kozea/weasyprint --json tagName --template '{{.tagName}}')
-          isPreRelease=$(gh release view --repo kozea/weasyprint --json isPrerelease --template '{{.isPrerelease}}')
-                    
-          if [[ $isPreRelease == "true" ]]; then
-            release="nop"
-          else
-            release="create"
-          fi
-          
-          echo "release=$release" >> "$GITHUB_OUTPUT"
+          version=$(curl -sSL https://pypi.org/pypi/weasyprint/json | jq '.info.version')
+
           echo "version=$version" >> "$GITHUB_OUTPUT"
             
       - name: "Login [ghcr.io]"
-        if: ${{ steps.metadata.outputs.release == 'create' }}
         uses: "docker/login-action@v2.1.0"
         with:
           registry: ${{ env.CONTAINER_REGISTRY }}
@@ -58,23 +45,21 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: "Extract MetaData (Tags, Labels)"
-        if: ${{ steps.metadata.outputs.release == 'create' }}
-        id: "docker-metadata"
+        id: "metadata"
         uses: "docker/metadata-action@v4.3.0"
         with:
           images: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_NAME }}
           tags: |
-            ${{ steps.metadata.outputs.version }}
+            ${{ steps.pypi.outputs.version }}
             latest
           labels: |
             org.opencontainers.image.title=WeasyPrint
-            org.opencontainers.image.version=${{ steps.metadata.outputs.version }}
+            org.opencontainers.image.version=${{ steps.pypi.outputs.version }}
           
       - name: "Build & Push"
-        if: ${{ steps.metadata.outputs.release == 'create' }}
         uses: "docker/build-push-action@v4.0.0"
         with:
           context: "."
           push: "true"
-          tags: ${{ steps.docker-metadata.outputs.tags }}
-          labels: ${{ steps.docker-metadata.outputs.labels }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
