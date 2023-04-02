@@ -33,9 +33,9 @@ jobs:
         id: "pypi"
         shell: "bash"
         run: |
-          version=$(curl -sSL https://pypi.org/pypi/weasyprint/json | jq '.info.version')
+          latest_version=$(curl -sSL https://pypi.org/pypi/weasyprint/json | jq '.info.latest_version')
 
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "latest_version=$latest_version" >> "$GITHUB_OUTPUT"
             
       - name: "Login [ghcr.io]"
         uses: "docker/login-action@v2.1.0"
@@ -50,11 +50,11 @@ jobs:
         with:
           images: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_NAME }}
           tags: |
-            ${{ steps.pypi.outputs.version }}
+            ${{ steps.pypi.outputs.latest_version }}
             latest
           labels: |
             org.opencontainers.image.title=WeasyPrint
-            org.opencontainers.image.version=${{ steps.pypi.outputs.version }}
+            org.opencontainers.image.version=${{ steps.pypi.outputs.latest_version }}
           
       - name: "Build & Push"
         uses: "docker/build-push-action@v4.0.0"
