@@ -36,8 +36,21 @@ jobs:
           latest_version=$(curl -sSL https://pypi.org/pypi/weasyprint/json | jq '.info.latest_version')
 
           echo "latest_version=$latest_version" >> "$GITHUB_OUTPUT"
+
+      - name: "Fetch Latest Version [ghcr.io]"
+        continue-on-error: true
+        id: "ghcr"
+        shell: "bash"
+        run: |-
+          curl \
+            --silent \
+            --fail \
+            --head \
+            --header "Authorization: Bearer $(echo ${{ secrets.GITHUB_TOKEN }} | base64 )" \
+            https://${{ env.CONTAINER_REGISTRY }}/v2/${{ env.CONTAINER_NAME }}/manifests/${{ steps.pypi.outputs.latest_version }}
             
       - name: "Login [ghcr.io]"
+        if: ${{ steps.ghcr.outcome == 'failure' }}
         uses: "docker/login-action@v2.1.0"
         with:
           registry: ${{ env.CONTAINER_REGISTRY }}
@@ -45,6 +58,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: "Extract MetaData (Tags, Labels)"
+        if: ${{ steps.ghcr.outcome == 'failure' }}
         id: "metadata"
         uses: "docker/metadata-action@v4.3.0"
         with:
@@ -57,6 +71,7 @@ jobs:
             org.opencontainers.image.version=${{ steps.pypi.outputs.latest_version }}
           
       - name: "Build & Push"
+        if: ${{ steps.ghcr.outcome == 'failure' }}
         uses: "docker/build-push-action@v4.0.0"
         with:
           context: "."
