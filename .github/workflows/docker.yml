@@ -33,7 +33,7 @@ jobs:
         id: "pypi"
         shell: "bash"
         run: |
-          latest_version=$(curl -sSL https://pypi.org/pypi/weasyprint/json | jq '.info.latest_version')
+          latest_version=$(curl -sSL https://pypi.org/pypi/weasyprint/json | jq '.info.version')
 
           echo "latest_version=$latest_version" >> "$GITHUB_OUTPUT"
 
